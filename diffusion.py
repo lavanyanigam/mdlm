@@ -362,7 +362,7 @@ class Diffusion(L.LightningModule):
       attention_mask = batch['attention_mask']
     else:
       attention_mask = None
-    losses = self._loss(batch['input_ids'], attention_mask)
+    losses = self._loss(batch['input_ids'], attention_mask, is_training=(prefix == 'train'))
     loss = losses.loss
 
     if prefix == 'train':
@@ -797,12 +797,30 @@ class Diffusion(L.LightningModule):
                         0)[..., None]
     return edge
 
-  def _sample_t(self, n, device):
-    _eps_t = torch.rand(n, device=device)
-    if self.antithetic_sampling:
-      offset = torch.arange(n, device=device) / n
-      _eps_t = (_eps_t / n + offset) % 1
-    t = (1 - self.sampling_eps) * _eps_t + self.sampling_eps
+  def _sample_t(self, n, device, is_training=False):
+    if is_training:
+      bl = self.config.training.get('t_band_low', 0.0)
+      bh = self.config.training.get('t_band_high', 1.0)
+      if bl == 0.0 and bh == 1.0:
+        _eps_t = torch.rand(n, device=device)
+        if self.antithetic_sampling:
+          offset = torch.arange(n, device=device) / n
+          _eps_t = (_eps_t / n + offset) % 1
+        t = (1 - self.sampling_eps) * _eps_t + self.sampling_eps
+      else:
+        # Restricted time-band for the diffusion timestep, referencing the config values.
+        _eps_t = torch.rand(n, device=device)
+        if self.antithetic_sampling:
+          offset = torch.arange(n, device=device) / n
+          _eps_t = (_eps_t / n + offset) % 1
+        t = bl + (bh - bl) * _eps_t
+    else:
+      _eps_t = torch.rand(n, device=device)
+      if self.antithetic_sampling:
+        offset = torch.arange(n, device=device) / n
+        _eps_t = (_eps_t / n + offset) % 1
+      t = (1 - self.sampling_eps) * _eps_t + self.sampling_eps
+      
     if self.importance_sampling:
       return self.noise.importance_sampling_transformation(t)
     return t
@@ -844,8 +862,8 @@ class Diffusion(L.LightningModule):
                           dim=-1,
                           index=x0[:, :, None]).squeeze(-1)
 
-  def _forward_pass_diffusion(self, x0):
-    t = self._sample_t(x0.shape[0], x0.device)
+  def _forward_pass_diffusion(self, x0, is_training=False):
+    t = self._sample_t(x0.shape[0], x0.device, is_training=is_training)
     if self.T > 0:
       t = (t * self.T).to(torch.int)
       t = t / self.T
@@ -893,7 +911,7 @@ class Diffusion(L.LightningModule):
     return - log_p_theta * (
       dsigma / torch.expm1(sigma))[:, None]
 
-  def _loss(self, x0, attention_mask):
+  def _loss(self, x0, attention_mask, is_training=False):
     (input_tokens, output_tokens,
      attention_mask) = self._maybe_sub_sample(
        x0, attention_mask)
@@ -903,7 +921,7 @@ class Diffusion(L.LightningModule):
       loss = - logprobs.gather(
         -1, output_tokens[:, :, None])[:, :, 0]
     else:
-      loss = self._forward_pass_diffusion(input_tokens)
+      loss = self._forward_pass_diffusion(input_tokens, is_training=is_training)
     
     nlls = loss * attention_mask
     count = attention_mask.sum()
