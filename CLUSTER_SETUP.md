@@ -27,9 +27,9 @@ To install the environment without hitting Out-of-Memory (OOM) or CPU throttling
 ## 2. Dataset Caching & Disk Quota Management
 The OpenWebText dataset is large and can easily exceed user storage quotas in your home directory `/home/aryan_s2/`.
 
-* **Current Active Cache Path**: `/tmp/aryan_s2_data`
-* **Why?** The `/tmp` directory is mounted on the system root partition `/` which has **275 GB of free space** and does not count towards your `/home` user quota.
-* **Configuration**: This is pre-configured in the launch script via the `data.cache_dir=/tmp/aryan_s2_data` override.
+* **Current Active Cache Path**: `/home/aryan_s2/mdlm_data`
+* **Why?** Storing in your home folder ensures the tokenized cache is permanent and won't be deleted on system reboots.
+* **Configuration**: This is pre-configured in the launch script via the `data.cache_dir=/home/aryan_s2/mdlm_data` override.
 
 ### Cleaning Up Old/Wasted Checkpoints
 Model checkpoints (`.ckpt` files) consume several gigabytes each. To free up your home directory quota, run the following commands:
