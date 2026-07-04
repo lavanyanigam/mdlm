@@ -125,11 +125,11 @@ def smoke():
     print("Smoke test on CPU passed successfully!")
 
 
-# 3. Full Training Function: Runs on cost-effective L4 GPU ($0.72/hour)
+# 3. Full Training Function: Runs on high-performance A100 GPU ($2.21/hour)
 @app.function(
     image=image,
-    gpu="L4",             # L4 is extremely cost-effective ($0.72/hr) and perfect for this job
-    timeout=7200,         # 2 hours timeout max (safeguards your budget)
+    gpu="A100",           # A100 offers much larger VRAM (40GB) and is 3x faster, reducing total training time from 18h to ~3.5h
+    timeout=18000,        # 5 hours timeout max (safeguards your budget)
     volumes={"/root/storage": volume},
     secrets=secrets
 )
@@ -152,8 +152,8 @@ def train():
     cmd = [
         "python", "-u", "-m", "main",
         "trainer.accelerator=gpu",
-        "loader.batch_size=8",
-        "loader.eval_batch_size=8",
+        "loader.batch_size=16",
+        "loader.eval_batch_size=16",
         "model=small",
         "data=openwebtext-split",
         f"data.cache_dir={cache_dir}",
@@ -165,6 +165,8 @@ def train():
         "trainer.max_steps=2000",      # Full 2k steps run
         "trainer.devices=1",
         "trainer.num_nodes=1",
+        "trainer.limit_val_batches=250",  # limit validation to 250 batches to save time (takes 40s instead of 40 mins)
+        "trainer.val_check_interval=1000", # validate only every 1000 optimizer steps
         "training.t_band_low=0.2",
         "training.t_band_high=0.8",
         f"checkpointing.save_dir={save_dir}",
@@ -179,7 +181,7 @@ def train():
         cmd.append("+wandb.offline=true")
         print("No WANDB_API_KEY found in local environment. Running training offline...")
 
-    print("Starting full GPU training command on Modal L4...")
+    print("Starting full GPU training command on Modal A100...")
     subprocess.run(cmd, env=env, check=True)
     
     # Commit volume changes explicitly
