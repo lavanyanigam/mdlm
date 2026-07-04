@@ -59,7 +59,7 @@ image = (
 @app.function(
     image=image,
     timeout=3600,         # 1 hour timeout
-    mounts=[modal.Mount.from_local_dir(".", remote_path="/root/mdlm")],
+    mounts=[modal.mount.Mount().add_local_dir(".", remote_path="/root/mdlm")],
     volumes={"/root/storage": volume}
 )
 def tokenize():
@@ -82,7 +82,7 @@ def tokenize():
 @app.function(
     image=image,
     timeout=600,          # 10 minutes timeout
-    mounts=[modal.Mount.from_local_dir(".", remote_path="/root/mdlm")],
+    mounts=[modal.mount.Mount().add_local_dir(".", remote_path="/root/mdlm")],
     volumes={"/root/storage": volume}
 )
 def smoke():
@@ -127,7 +127,7 @@ def smoke():
     image=image,
     gpu="L4",             # L4 is extremely cost-effective ($0.72/hr) and perfect for this job
     timeout=7200,         # 2 hours timeout max (safeguards your budget)
-    mounts=[modal.Mount.from_local_dir(".", remote_path="/root/mdlm")],
+    mounts=[modal.mount.Mount().add_local_dir(".", remote_path="/root/mdlm")],
     volumes={"/root/storage": volume},
     secrets=[modal.Secret.from_name("my-wandb-secret")] # Ensure your WANDB_API_KEY is configured in Modal secrets
 )
