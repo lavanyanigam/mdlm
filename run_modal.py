@@ -54,15 +54,84 @@ image = (
 
 # We mount your local repository directory into /root/mdlm inside the container.
 # We also mount the persistent volume to /root/storage for datasets and checkpoints.
+
+# 1. Dataset Tokenization Function: Runs entirely on cheap Modal CPU (No GPU used)
 @app.function(
     image=image,
-    gpu="A10G",          # A10G is $1.10/hour (very cheap and plenty of power for 2k steps)
-    timeout=7200,        # 2 hours timeout max (saves budget in case of hang)
+    timeout=3600,         # 1 hour timeout
+    mounts=[modal.Mount.from_local_dir(".", remote_path="/root/mdlm")],
+    volumes={"/root/storage": volume}
+)
+def tokenize():
+    os.chdir("/root/mdlm")
+    
+    # Configure Hugging Face cache dirs to use persistent volume
+    env = os.environ.copy()
+    env["HF_HOME"] = "/root/storage/huggingface_home"
+    env["HF_DATASETS_CACHE"] = "/root/storage/huggingface_cache"
+    
+    print("Starting tokenization task on Modal CPU...")
+    # This runs tokenize_dataset.py which tokenizes and wraps/groups OWT
+    subprocess.run(["python", "tokenize_dataset.py", "data=openwebtext-split"], env=env, check=True)
+    
+    volume.commit()
+    print("Tokenization completed and saved to persistent volume successfully!")
+
+
+# 2. Smoke Test Function: Runs entirely on cheap Modal CPU (No GPU used)
+@app.function(
+    image=image,
+    timeout=600,          # 10 minutes timeout
+    mounts=[modal.Mount.from_local_dir(".", remote_path="/root/mdlm")],
+    volumes={"/root/storage": volume}
+)
+def smoke():
+    os.chdir("/root/mdlm")
+    
+    # Configure Hugging Face cache dirs to use persistent volume
+    env = os.environ.copy()
+    env["HF_HOME"] = "/root/storage/huggingface_home"
+    env["HF_DATASETS_CACHE"] = "/root/storage/huggingface_cache"
+    
+    print("Starting offline smoke test on Modal CPU...")
+    cmd = [
+        "python", "-u", "-m", "main",
+        "trainer.accelerator=cpu",    # Run on CPU
+        "loader.batch_size=2",        # Small batch size for quick check
+        "loader.eval_batch_size=2",
+        "model=small",
+        "data=openwebtext-split",
+        "data.cache_dir=/root/storage/mdlm_data",
+        "parameterization=subs",
+        "model.length=1024",
+        "trainer.max_steps=5",        # Only 5 steps
+        "trainer.devices=1",
+        "trainer.num_nodes=1",
+        "training.t_band_low=0.2",
+        "training.t_band_high=0.8",
+        "checkpointing.save_dir=/root/storage/mdlm_checkpoints/smoke",
+        "checkpointing.resume_from_ckpt=False",
+        "eval.compute_generative_perplexity=False", # Skip perplexity
+        "sampling.steps=10",
+        "lr_scheduler.num_warmup_steps=1",
+        "+wandb.offline=true"         # Run offline
+    ]
+    
+    subprocess.run(cmd, env=env, check=True)
+    volume.commit()
+    print("Smoke test on CPU passed successfully!")
+
+
+# 3. Full Training Function: Runs on cost-effective L4 GPU ($0.72/hour)
+@app.function(
+    image=image,
+    gpu="L4",             # L4 is extremely cost-effective ($0.72/hr) and perfect for this job
+    timeout=7200,         # 2 hours timeout max (safeguards your budget)
     mounts=[modal.Mount.from_local_dir(".", remote_path="/root/mdlm")],
     volumes={"/root/storage": volume},
-    secrets=[modal.Secret.from_name("my-wandb-secret")] # Add wandb secret if logging to wandb
+    secrets=[modal.Secret.from_name("my-wandb-secret")] # Ensure your WANDB_API_KEY is configured in Modal secrets
 )
-def train(smoke: bool = False):
+def train():
     os.chdir("/root/mdlm")
 
     # Define directories inside the persistent volume
@@ -77,54 +146,34 @@ def train(smoke: bool = False):
     env["HF_HOME"] = "/root/storage/huggingface_home"
     env["HF_DATASETS_CACHE"] = "/root/storage/huggingface_cache"
 
-    # Default parameters for a full training run
-    max_steps = 2000
-    warmup_steps = 200
-    compute_perplexity = "True"
-    sampling_steps = 1000
-    wandb_project = "sm-mdlm"
-    wandb_name = "mdlm-owt-tband-0.2-0.8"
-
-    # If running a smoke test, override with extremely lightweight settings
-    if smoke:
-        print("====== RUNNING LIGHTWEIGHT SMOKE TEST ======")
-        max_steps = 5
-        warmup_steps = 1
-        compute_perplexity = "False"
-        sampling_steps = 10
-        wandb_project = "sm-mdlm-smoke"
-        wandb_name = "mdlm-smoke-test"
-
     cmd = [
         "python", "-u", "-m", "main",
+        "trainer.accelerator=gpu",
         "loader.batch_size=16",
         "loader.eval_batch_size=16",
         "model=small",
         "data=openwebtext-split",
         f"data.cache_dir={cache_dir}",
-        f"wandb.project={wandb_project}",
+        "wandb.project=sm-mdlm",
         "wandb.entity=slerp-on-smdlm",
-        f"wandb.name={wandb_name}",
+        "wandb.name=mdlm-owt-tband-0.2-0.8",
         "parameterization=subs",
         "model.length=1024",
-        f"trainer.max_steps={max_steps}",
+        "trainer.max_steps=2000",      # Full 2k steps run
         "trainer.devices=1",
         "trainer.num_nodes=1",
         "training.t_band_low=0.2",
         "training.t_band_high=0.8",
         f"checkpointing.save_dir={save_dir}",
         "checkpointing.resume_from_ckpt=False",
-        f"eval.compute_generative_perplexity={compute_perplexity}",
-        f"sampling.steps={sampling_steps}",
-        f"lr_scheduler.num_warmup_steps={warmup_steps}"
+        "eval.compute_generative_perplexity=True",
+        "sampling.steps=1000",
+        "lr_scheduler.num_warmup_steps=200"
     ]
 
-    if smoke:
-        cmd.append("+wandb.offline=true")  # Run offline for smoke test to avoid login blocks
-
-    print(f"Starting training command on Modal (smoke={smoke})...")
+    print("Starting full GPU training command on Modal L4...")
     subprocess.run(cmd, env=env, check=True)
     
     # Commit volume changes explicitly
     volume.commit()
-    print("Training finished successfully! Persistent volume committed.")
+    print("Training complete! Checkpoints successfully saved to persistent volume.")
