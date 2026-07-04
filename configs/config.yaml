@@ -79,6 +79,7 @@ trainer:
 
 wandb:
   project: text-diffusion
+  entity: null
   notes: Mulan for text
   group: null
   job_type: null
