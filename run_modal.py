@@ -94,9 +94,10 @@ def tokenize():
     print("Tokenization completed and saved to persistent volume successfully!")
 
 
-# 2. Smoke Test Function: Runs entirely on cheap Modal CPU (No GPU used)
+# 2. Smoke Test Function: Runs on cost-effective L4 GPU ($0.72/hour)
 @app.function(
     image=image,
+    gpu="L4",
     timeout=600,          # 10 minutes timeout
     volumes={"/root/storage": volume}
 )
@@ -108,10 +109,10 @@ def smoke():
     env["HF_HOME"] = "/root/storage/huggingface_home"
     env["HF_DATASETS_CACHE"] = "/root/storage/huggingface_cache"
     
-    print("Starting offline smoke test on Modal CPU...")
+    print("Starting offline smoke test on Modal GPU...")
     cmd = [
         "python", "-u", "-m", "main",
-        "trainer.accelerator=cpu",    # Run on CPU
+        "trainer.accelerator=gpu",    # Run on GPU
         "loader.batch_size=2",        # Small batch size for quick check
         "loader.eval_batch_size=2",
         "model=small",
