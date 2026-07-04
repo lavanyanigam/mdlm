@@ -10,7 +10,7 @@ volume = modal.Volume.from_name("mdlm-storage", create_if_missing=True)
 
 # Build the container image with matching PyTorch 2.4.0 and CUDA compilation tools
 image = (
-    modal.Image.debian_slim(python_version="3.10")
+    modal.Image.from_registry("nvidia/cuda:12.1.1-devel-ubuntu22.04", add_python="3.10")
     .apt_install("git", "build-essential")
     .pip_install(
         "torch==2.4.0",
