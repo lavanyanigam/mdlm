@@ -23,6 +23,7 @@ loader.batch_size=16 \
 loader.eval_batch_size=16 \
 model=small \
 data=openwebtext-split \
+data.cache_dir=/home/aryan_s2/mdlm_data \
 wandb.name=mdlm-owt-tband-0.2-0.8 \
 parameterization=subs \
 model.length=1024 \
