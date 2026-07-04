@@ -94,6 +94,7 @@ def smoke():
     env = os.environ.copy()
     env["HF_HOME"] = "/root/storage/huggingface_home"
     env["HF_DATASETS_CACHE"] = "/root/storage/huggingface_cache"
+    env["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
     
     print("Starting offline smoke test on Modal GPU...")
     cmd = [
@@ -146,12 +147,13 @@ def train():
     env = os.environ.copy()
     env["HF_HOME"] = "/root/storage/huggingface_home"
     env["HF_DATASETS_CACHE"] = "/root/storage/huggingface_cache"
+    env["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 
     cmd = [
         "python", "-u", "-m", "main",
         "trainer.accelerator=gpu",
-        "loader.batch_size=16",
-        "loader.eval_batch_size=16",
+        "loader.batch_size=8",
+        "loader.eval_batch_size=8",
         "model=small",
         "data=openwebtext-split",
         f"data.cache_dir={cache_dir}",
