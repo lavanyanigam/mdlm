@@ -18,7 +18,7 @@ image = (
         "torchaudio==2.4.0",
         index_url="https://download.pytorch.org/whl/cu121"
     )
-    .pip_install("ninja", "packaging")
+    .pip_install("ninja", "packaging", "wheel")
     # Install FlashAttention precompiled wheel
     .pip_install("https://github.com/Dao-AILab/flash-attention/releases/download/v2.6.3/flash_attn-2.6.3+cu123torch2.4cxx11abiFALSE-cp310-cp310-linux_x86_64.whl")
     # Install standard python dependencies
