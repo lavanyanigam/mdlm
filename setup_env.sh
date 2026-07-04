@@ -40,7 +40,7 @@ echo "Installing custom CUDA extensions..."
 
 # Install Flash Attention from precompiled GitHub Release wheel (installs in seconds!)
 echo "Installing Flash Attention via precompiled wheel..."
-$PIP_BIN install https://github.com/Dao-AILab/flash-attention/releases/download/v2.6.3/flash_attn-2.6.3+cu12torch2.4cxx11abiFALSE-cp310-cp310-linux_x86_64.whl
+$PIP_BIN install https://github.com/Dao-AILab/flash-attention/releases/download/v2.6.3/flash_attn-2.6.3+cu123torch2.4cxx11abiFALSE-cp310-cp310-linux_x86_64.whl
 
 # Causal Conv1D (builds locally - very fast, <1 minute)
 if [ ! -d "causal-conv1d" ]; then
