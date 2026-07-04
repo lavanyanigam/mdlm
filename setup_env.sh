@@ -22,7 +22,7 @@ export CUDA_HOME=/usr/local/cuda-12.8
 export PATH="$ENV_DIR/bin:$CUDA_HOME/bin:$PATH"
 export LD_LIBRARY_PATH="$CUDA_HOME/lib64:$LD_LIBRARY_PATH"
 export TORCH_CUDA_ARCH_LIST="8.6"
-export MAX_JOBS=4
+export MAX_JOBS=2
 
 # 3. Install PyTorch with CUDA 12.4 wheels (pinned versions)
 echo "Installing PyTorch and torchvision..."
