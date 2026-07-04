@@ -54,8 +54,10 @@ image = (
     .add_local_dir(".", remote_path="/root/mdlm")
 )
 
-# We mount your local repository directory into /root/mdlm inside the container.
-# We also mount the persistent volume to /root/storage for datasets and checkpoints.
+# Dynamically forward WANDB_API_KEY if present in your local terminal environment
+secrets = []
+if "WANDB_API_KEY" in os.environ:
+    secrets.append(modal.Secret.from_dict({"WANDB_API_KEY": os.environ["WANDB_API_KEY"]}))
 
 # 1. Dataset Tokenization Function: Runs entirely on cheap Modal CPU (No GPU used)
 @app.function(
@@ -128,7 +130,7 @@ def smoke():
     gpu="L4",             # L4 is extremely cost-effective ($0.72/hr) and perfect for this job
     timeout=7200,         # 2 hours timeout max (safeguards your budget)
     volumes={"/root/storage": volume},
-    secrets=[modal.Secret.from_name("my-wandb-secret")] # Ensure your WANDB_API_KEY is configured in Modal secrets
+    secrets=secrets
 )
 def train():
     os.chdir("/root/mdlm")
@@ -169,6 +171,11 @@ def train():
         "sampling.steps=1000",
         "lr_scheduler.num_warmup_steps=200"
     ]
+
+    # If no W&B secret is forwarded, run offline to avoid blocking
+    if not secrets:
+        cmd.append("+wandb.offline=true")
+        print("No WANDB_API_KEY found in local environment. Running training offline...")
 
     print("Starting full GPU training command on Modal L4...")
     subprocess.run(cmd, env=env, check=True)
