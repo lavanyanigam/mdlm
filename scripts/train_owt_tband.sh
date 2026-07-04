@@ -5,8 +5,8 @@
 #SBATCH --mem=64G                     # server memory requested
 #SBATCH -t 04:00:00                   # Time limit (hh:mm:ss)
 #SBATCH --partition=gpu               # Request partition
-#SBATCH --ntasks-per-node=2           # 2 tasks per node (one per GPU)
-#SBATCH --gres=gpu:2                  # Type/number of GPUs needed
+#SBATCH --ntasks-per-node=1           # 1 task per node (one per GPU)
+#SBATCH --gres=gpu:1                  # Type/number of GPUs needed
 #SBATCH --cpus-per-task=4             # CPUs per task
 #SBATCH --open-mode=append            # Do not overwrite logs
 #SBATCH --requeue                     # Requeue upon pre-emption
@@ -27,7 +27,7 @@ wandb.name=mdlm-owt-tband-0.2-0.8 \
 parameterization=subs \
 model.length=1024 \
 trainer.max_steps=2000 \
-trainer.devices=2 \
+trainer.devices=1 \
 trainer.num_nodes=1 \
 training.t_band_low=0.2 \
 training.t_band_high=0.8 \
