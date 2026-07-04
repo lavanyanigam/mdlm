@@ -35,6 +35,7 @@ trainer.num_nodes=1 \
 training.t_band_low=0.2 \
 training.t_band_high=0.8 \
 checkpointing.save_dir=/home/aryan_s2/mdlm_checkpoints/tband_0.2_0.8 \
+checkpointing.resume_from_ckpt=False \
 eval.compute_generative_perplexity=True \
 sampling.steps=1000 \
 lr_scheduler.num_warmup_steps=200
