@@ -50,6 +50,8 @@ image = (
         "git clone -b v1.1.4 https://github.com/state-spaces/mamba.git",
         "cd mamba && python setup.py install"
     )
+    # Add local directory to /root/mdlm (runtime mount)
+    .add_local_dir(".", remote_path="/root/mdlm")
 )
 
 # We mount your local repository directory into /root/mdlm inside the container.
@@ -59,7 +61,6 @@ image = (
 @app.function(
     image=image,
     timeout=3600,         # 1 hour timeout
-    mounts=[modal.mount.Mount().add_local_dir(".", remote_path="/root/mdlm")],
     volumes={"/root/storage": volume}
 )
 def tokenize():
@@ -82,7 +83,6 @@ def tokenize():
 @app.function(
     image=image,
     timeout=600,          # 10 minutes timeout
-    mounts=[modal.mount.Mount().add_local_dir(".", remote_path="/root/mdlm")],
     volumes={"/root/storage": volume}
 )
 def smoke():
@@ -127,7 +127,6 @@ def smoke():
     image=image,
     gpu="L4",             # L4 is extremely cost-effective ($0.72/hr) and perfect for this job
     timeout=7200,         # 2 hours timeout max (safeguards your budget)
-    mounts=[modal.mount.Mount().add_local_dir(".", remote_path="/root/mdlm")],
     volumes={"/root/storage": volume},
     secrets=[modal.Secret.from_name("my-wandb-secret")] # Ensure your WANDB_API_KEY is configured in Modal secrets
 )
