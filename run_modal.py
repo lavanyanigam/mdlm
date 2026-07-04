@@ -54,10 +54,23 @@ image = (
     .add_local_dir(".", remote_path="/root/mdlm")
 )
 
-# Dynamically forward WANDB_API_KEY if present in your local terminal environment
+# Dynamically forward WANDB_API_KEY if present in environment or ~/.netrc
 secrets = []
-if "WANDB_API_KEY" in os.environ:
-    secrets.append(modal.Secret.from_dict({"WANDB_API_KEY": os.environ["WANDB_API_KEY"]}))
+wandb_key = os.environ.get("WANDB_API_KEY")
+if not wandb_key:
+    try:
+        import netrc
+        netrc_path = os.path.expanduser("~/.netrc")
+        if os.path.exists(netrc_path):
+            n = netrc.netrc(netrc_path)
+            auth = n.authenticators("api.wandb.ai")
+            if auth:
+                wandb_key = auth[2]
+    except Exception:
+        pass
+
+if wandb_key:
+    secrets.append(modal.Secret.from_dict({"WANDB_API_KEY": wandb_key}))
 
 # 1. Dataset Tokenization Function: Runs entirely on cheap Modal CPU (No GPU used)
 @app.function(
