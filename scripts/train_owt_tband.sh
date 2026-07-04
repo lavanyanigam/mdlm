@@ -14,7 +14,7 @@
 
 # To enable preemption re-loading, set `hydra.run.dir` or 
 # `checkpointing.save_dir` explicitly.
-srun python -u -m main \
+srun /home/aryan_s2/.conda/envs/mdlm/bin/python -u -m main \
   loader.batch_size=16 \
   loader.eval_batch_size=16 \
   model=small \
