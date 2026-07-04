@@ -15,12 +15,15 @@
 checkpoint_path=/share/kuleshov/ssahoo/textdiffusion/text-diffusion-exp-v4-nBm2gE-small-param-sedd_data-openwebtext-split_seqlen-1024_maxs-1300001_bs-512/checkpoints/last.ckpt
 
 export HYDRA_FULL_ERROR=1
+export HF_HOME="/tmp/huggingface_home"
+export HF_DATASETS_CACHE="/tmp/huggingface_cache"
 
 srun python -u -m main \
   mode=ppl_eval \
   loader.batch_size=16 \
   loader.eval_batch_size=16 \
   data=openwebtext-split \
+  data.cache_dir=/tmp/mdlm_data \
   model=small \
   parameterization=sedd \
   backbone=dit \

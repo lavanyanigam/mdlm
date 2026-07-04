@@ -18,12 +18,17 @@ export CUDA_HOME=/usr/local/cuda-12.8
 export LD_LIBRARY_PATH="$CUDA_HOME/lib64:$LD_LIBRARY_PATH"
 export PATH="/home/aryan_s2/.conda/envs/mdlm/bin:$PATH"
  
+# Redirect Hugging Face downloads and temp files to /tmp to prevent disk quota issues in home dir
+export HF_HOME="/tmp/huggingface_home"
+export HF_DATASETS_CACHE="/tmp/huggingface_cache"
+export HF_DATASETS_IN_MEMORY_MAX_SIZE=0
+
 srun /home/aryan_s2/.conda/envs/mdlm/bin/python -u -m main \
 loader.batch_size=16 \
 loader.eval_batch_size=16 \
 model=small \
 data=openwebtext-split \
-data.cache_dir=/home/aryan_s2/mdlm_data \
+data.cache_dir=/tmp/mdlm_data \
 wandb.project=sm-mdlm \
 wandb.entity=slerp-on-smdlm \
 wandb.name=mdlm-owt-tband-0.2-0.8 \
@@ -34,7 +39,7 @@ trainer.devices=1 \
 trainer.num_nodes=1 \
 training.t_band_low=0.2 \
 training.t_band_high=0.8 \
-checkpointing.save_dir=/home/aryan_s2/mdlm_checkpoints/tband_0.2_0.8 \
+checkpointing.save_dir=/tmp/mdlm_checkpoints/tband_0.2_0.8 \
 checkpointing.resume_from_ckpt=False \
 eval.compute_generative_perplexity=True \
 sampling.steps=1000 \

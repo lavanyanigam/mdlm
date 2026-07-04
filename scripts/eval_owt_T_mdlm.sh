@@ -15,6 +15,8 @@
 checkpoint_path=/share/kuleshov/ssahoo/textdiffusion/text-diff-mulan-v2-scalar-owt-not-tZycWP-small-param-subs_data-openwebtext-split_seqlen-1024_maxs-1300001_bs-512/checkpoints/60-1000000.ckpt
 
 export HYDRA_FULL_ERROR=1
+export HF_HOME="/tmp/huggingface_home"
+export HF_DATASETS_CACHE="/tmp/huggingface_cache"
 
 for T in 0 1000; do
   echo "$T"
@@ -23,6 +25,7 @@ for T in 0 1000; do
     loader.batch_size=16 \
     loader.eval_batch_size=16 \
     data=openwebtext-split \
+    data.cache_dir=/tmp/mdlm_data \
     model=small \
     parameterization=subs \
     backbone=dit \

@@ -27,22 +27,36 @@ To install the environment without hitting Out-of-Memory (OOM) or CPU throttling
 ## 2. Dataset Caching & Disk Quota Management
 The OpenWebText dataset is large and can easily exceed user storage quotas in your home directory `/home/aryan_s2/`.
 
-* **Current Active Cache Path**: `/home/aryan_s2/mdlm_data`
-* **Why?** Storing in your home folder ensures the tokenized cache is permanent and won't be deleted on system reboots.
-* **Configuration**: This is pre-configured in the launch script via the `data.cache_dir=/home/aryan_s2/mdlm_data` override.
+* **Current Active Cache Path**: `/tmp/mdlm_data`
+* **Hugging Face Cache**: `/tmp/huggingface_cache` (redirected via `HF_DATASETS_CACHE` env var)
+* **Why `/tmp`?** Using `/tmp` bypasses your personal 320 GB home directory quota. It resides on the high-speed local NVMe storage of the compute node (with over 270 GB of free space), ensuring optimal performance.
+* **Fast Tokenization**: Tokenization leverages multi-processing (`num_proc=num_workers`) and PyArrow's zero-copy memory mapping on the local SSD. Disk caching is kept enabled (`load_from_cache_file=True`) so that if a training job is restarted or resumed on the same node, it loads the tokenized dataset **instantly** without re-processing.
+
+### How to Clean Up Half-Tokenized / Aborted Datasets
+If a tokenization run gets aborted mid-way, Hugging Face `datasets` can leave behind lock files or half-written temporary cache files that consume space. To clear them and start clean, run:
+
+```bash
+# Clear all Hugging Face temporary files and cache on the node
+rm -rf /tmp/huggingface_cache/*
+rm -rf /tmp/huggingface_home/*
+
+# Clear the tokenized dataset cache on the node
+rm -rf /tmp/mdlm_data/*
+```
 
 ### Cleaning Up Old/Wasted Checkpoints
-Model checkpoints (`.ckpt` files) consume several gigabytes each. To free up your home directory quota, run the following commands:
+Model checkpoints (`.ckpt` files) consume several gigabytes each. Since they are saved to `/tmp/mdlm_checkpoints` to avoid quota limits, you should clean up any old, unneeded runs:
 
-* **Remove all checkpoints in the temporary checkpoints folder**:
-   ```bash
-   rm -rf /home/aryan_s2/checkpoints/*.ckpt
-   ```
+```bash
+# Remove all checkpoints in the /tmp checkpoints folder
+rm -rf /tmp/mdlm_checkpoints/*
+```
 
-* **Remove old checkpoints inside Hydra output folders**:
-   ```bash
-   rm -rf /home/aryan_s2/mdlm/outputs/*/checkpoints/*.ckpt
-   ```
+> [!IMPORTANT]
+> Because `/tmp` is temporary and local to the node, make sure to copy your final model checkpoint (e.g. `last.ckpt`) back to your home folder `~/mdlm/` once training completes:
+> ```bash
+> cp /tmp/mdlm_checkpoints/<run_name>/checkpoints/last.ckpt ~/mdlm/
+> ```
 
 ---
 

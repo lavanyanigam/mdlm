@@ -15,11 +15,17 @@
 
 # To enable preemption re-loading, set `hydra.run.dir` or 
 # `checkpointing.save_dir` explicitly.
+# Redirect Hugging Face downloads and temp files to /tmp to prevent disk quota issues in home dir
+export HF_HOME="/tmp/huggingface_home"
+export HF_DATASETS_CACHE="/tmp/huggingface_cache"
+
 srun python -u -m main \
   loader.batch_size=16 \
   loader.eval_batch_size=16 \
   model=small \
   data=openwebtext-split \
+  data.cache_dir=/tmp/mdlm_data \
+  checkpointing.save_dir=/tmp/mdlm_checkpoints/sedd_owt \
   wandb.name=sedd-owt \
   parameterization=sedd \
   model.length=1024 \
